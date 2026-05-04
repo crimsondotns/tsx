@@ -36,7 +36,6 @@ jobs:
           echo "API_ENDPOINT=${{ secrets.API_ENDPOINT }}" >> .env
           echo "API_ORIGIN=${{ secrets.API_ORIGIN }}" >> .env
           echo "API_REFERER=${{ secrets.API_REFERER }}" >> .env
-          echo "FETCH_INTERVAL_MINUTES=${{ secrets.FETCH_INTERVAL_MINUTES || '15' }}" >> .env
 
       - name: Create credentials.json
         run: |

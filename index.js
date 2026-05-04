@@ -18,7 +18,7 @@ const TX_API_ENDPOINT = process.env.API_ENDPOINT || '/v1/user/history_all_list';
 if (!TX_API_BASE_URL) throw new Error('API_BASE_URL is required in .env');
 const SPREADSHEET_ID = process.env.GOOGLE_SPREADSHEET_ID;
 const SHEET_NAME = process.env.GOOGLE_SHEET_NAME;
-const FETCH_INTERVAL_MS = (parseInt(process.env.FETCH_INTERVAL_MINUTES, 10) || 15) * 60 * 1000;
+
 const LOCK_FILE = path.join(__dirname, '.bot.lock');
 
 const CREDENTIALS_PATH = path.join(__dirname, 'credentials.json');
@@ -566,7 +566,7 @@ async function processTransactions() {
 
   try {
     const wallets = loadWallets();
-    const intervalMins = FETCH_INTERVAL_MS / 60000;
+
 
     console.log('');
     console.log(`${timeTag()} ${chalk.bold.cyan(`🚀 STARTING TRANSACTION SYNC (${wallets.length} Wallets)`)}`);
