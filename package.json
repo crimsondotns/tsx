@@ -5,6 +5,11 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
+    "pm2:start": "pm2 start ecosystem.config.js",
+    "pm2:stop": "pm2 stop tx-tracker",
+    "pm2:restart": "pm2 restart tx-tracker",
+    "pm2:logs": "pm2 logs tx-tracker",
+    "pm2:status": "pm2 status",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

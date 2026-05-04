@@ -177,11 +177,7 @@ function pendingDelay() {
   return sleep(delay);
 }
 
-/** Random delay for 429 rate limit (30-60 seconds) */
-function rateLimitDelay() {
-  const delay = 30000 + Math.random() * 30000; // 30-60 seconds
-  return sleep(delay);
-}
+
 
 /** Safely access a value, returning null for null/undefined/''/[] */
 function v(val) {
@@ -229,7 +225,6 @@ async function fetchTransactions(walletAddress, maxRetries = 10, delayMs = 5000)
   const url = `${TX_API_BASE_URL}${TX_API_ENDPOINT}?id=${walletAddress}`;
   let rateLimitRetries = 0;
   let timeoutRetries = 0;
-  const MAX_RATE_LIMIT_RETRIES = 2;
   const MAX_TIMEOUT_RETRIES = 5;
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -260,12 +255,11 @@ async function fetchTransactions(walletAddress, maxRetries = 10, delayMs = 5000)
 
       if (status === 429) {
         rateLimitRetries++;
-        if (rateLimitRetries > MAX_RATE_LIMIT_RETRIES) {
-          throw new Error(`429 Too Many Requests — gave up after ${MAX_RATE_LIMIT_RETRIES} retries`);
-        }
-        const waitSec = Math.floor(30 + Math.random() * 30);
-        console.log(chalk.yellow(`       🚫 429 Rate-limited (${rateLimitRetries}/${MAX_RATE_LIMIT_RETRIES}), waiting ${waitSec}s...`));
-        await rateLimitDelay();
+        // Exponential backoff: 30-60s, 60-90s, 90-120s, ... capped at 180s
+        const baseWait = Math.min(30 * rateLimitRetries, 180);
+        const waitSec = Math.floor(baseWait + Math.random() * 30);
+        console.log(chalk.yellow(`       🚫 429 Rate-limited (retry #${rateLimitRetries}), waiting ${waitSec}s...`));
+        await sleep(waitSec * 1000);
         attempt--; // don't count 429 waits against normal retry budget
         continue;
       }
@@ -730,7 +724,7 @@ function removeLockFile() {
 }
 
 // ---------------------------------------------------------------------------
-// Graceful Shutdown — Single Job Mode
+// Graceful Shutdown — PM2 compatible
 // ---------------------------------------------------------------------------
 function shutdown(signal, exitCode = 0) {
   console.log('');
@@ -1094,12 +1088,14 @@ async function runManualMode(walletAddress) {
 }
 
 // ---------------------------------------------------------------------------
-// Single Job Runner — Run once and exit
+// Loop Runner — Run continuously (PM2 managed)
 // ---------------------------------------------------------------------------
-/** Run single job and exit */
-async function runSingleJob() {
+let cycleCount = 0;
+
+/** Run in loop mode — sync, then immediately start next cycle */
+async function runLoop() {
   createLockFile();
-  
+
   const wallets = loadWallets();
 
   console.log('');
@@ -1108,27 +1104,26 @@ async function runSingleJob() {
   console.log(chalk.gray(`   Wallets:    ${chalk.white(wallets.length)} address(es)`));
   console.log(chalk.gray(`   Sheet:      ${chalk.white(SPREADSHEET_ID)}`));
   console.log(chalk.gray(`   Delay:      ${chalk.white('1–2s')} jitter between wallets`));
-  console.log(chalk.gray(`   429 Backoff: ${chalk.white('30-60s')} random delay`));
-  console.log(chalk.gray(`   Mode:       ${chalk.cyan('Single Job (Run & Exit)')}`));
+  console.log(chalk.gray(`   429 Backoff: ${chalk.white('exponential (30s–180s)')}`));
+  console.log(chalk.gray(`   Mode:       ${chalk.cyan('Continuous Loop (PM2)')}`));
   console.log(chalk.gray(`   PID:        ${chalk.white(process.pid)}`));
   console.log(DIVIDER);
 
-  try {
-    const result = await processTransactions();
-    
-    if (result.success) {
-      console.log(chalk.green.bold('   ✅ Job completed successfully. Exiting...'));
-      removeLockFile();
-      process.exit(0);
-    } else {
-      console.log(chalk.red.bold('   ❌ Job failed. Exiting with error...'));
-      removeLockFile();
-      process.exit(1);
+  // Main loop — run forever, back-to-back
+  while (true) {
+    cycleCount++;
+    console.log('');
+    console.log(`${timeTag()} ${chalk.bold.cyan(`🔄 Cycle #${cycleCount} starting...`)}`);
+
+    try {
+      await processTransactions();
+    } catch (err) {
+      console.error(chalk.red(`   ❌ Unexpected error: ${err.message}`));
     }
-  } catch (err) {
-    console.error(chalk.red('Unexpected error:'), err);
-    removeLockFile();
-    process.exit(1);
+
+    // Brief cooldown (5s) before next cycle to avoid hammering
+    console.log(`${timeTag()} ${chalk.gray('⏩ Starting next cycle in 5s...')}`);
+    await sleep(5000);
   }
 }
 
@@ -1146,6 +1141,6 @@ if (manualWalletArg && manualWalletArg.startsWith('0x') && manualWalletArg.lengt
   console.error(chalk.gray(`      Expected format: 0x... (42 characters)`));
   process.exit(1);
 } else {
-  // Normal Single Job Mode
-  runSingleJob();
+  // Default: Continuous Loop Mode (PM2 managed)
+  runLoop();
 }
