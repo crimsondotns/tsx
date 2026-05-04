@@ -167,19 +167,19 @@ function sleep(ms) {
 }
 
 /** Random jitter delay between min and max (ms) */
-function jitterDelay(minMs = 3000, maxMs = 5000) {
+function jitterDelay(minMs = 1000, maxMs = 2000) {
   return sleep(minMs + Math.random() * (maxMs - minMs));
 }
 
-/** Longer random delay for pending status (5-15 seconds) */
+/** Longer random delay for pending status (3-8 seconds) */
 function pendingDelay() {
-  const delay = 5000 + Math.random() * 10000; // 5-15 seconds
+  const delay = 3000 + Math.random() * 5000; // 3-8 seconds
   return sleep(delay);
 }
 
-/** Random delay for 429 rate limit (120-180 seconds) */
+/** Random delay for 429 rate limit (30-60 seconds) */
 function rateLimitDelay() {
-  const delay = 120000 + Math.random() * 60000; // 120-180 seconds
+  const delay = 30000 + Math.random() * 30000; // 30-60 seconds
   return sleep(delay);
 }
 
@@ -229,7 +229,7 @@ async function fetchTransactions(walletAddress, maxRetries = 10, delayMs = 5000)
   const url = `${TX_API_BASE_URL}${TX_API_ENDPOINT}?id=${walletAddress}`;
   let rateLimitRetries = 0;
   let timeoutRetries = 0;
-  const MAX_RATE_LIMIT_RETRIES = 3;
+  const MAX_RATE_LIMIT_RETRIES = 2;
   const MAX_TIMEOUT_RETRIES = 5;
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -263,7 +263,7 @@ async function fetchTransactions(walletAddress, maxRetries = 10, delayMs = 5000)
         if (rateLimitRetries > MAX_RATE_LIMIT_RETRIES) {
           throw new Error(`429 Too Many Requests — gave up after ${MAX_RATE_LIMIT_RETRIES} retries`);
         }
-        const waitSec = Math.floor(120 + Math.random() * 60);
+        const waitSec = Math.floor(30 + Math.random() * 30);
         console.log(chalk.yellow(`       🚫 429 Rate-limited (${rateLimitRetries}/${MAX_RATE_LIMIT_RETRIES}), waiting ${waitSec}s...`));
         await rateLimitDelay();
         attempt--; // don't count 429 waits against normal retry budget
@@ -665,9 +665,9 @@ async function processTransactions() {
         walletStartTimes.push(Date.now() - walletStartTime);
       }
 
-      // Jitter delay between wallets (3–5s) to avoid rate-limiting
+      // Jitter delay between wallets (1–2s) to avoid rate-limiting
       if (i < wallets.length - 1) {
-        await jitterDelay(3000, 5000);
+        await jitterDelay(1000, 2000);
       }
     }
 
@@ -1107,8 +1107,8 @@ async function runSingleJob() {
   console.log(chalk.bold.cyan('   🔗 Crypto Transaction Tracker'));
   console.log(chalk.gray(`   Wallets:    ${chalk.white(wallets.length)} address(es)`));
   console.log(chalk.gray(`   Sheet:      ${chalk.white(SPREADSHEET_ID)}`));
-  console.log(chalk.gray(`   Delay:      ${chalk.white('3–5s')} jitter between wallets`));
-  console.log(chalk.gray(`   429 Backoff: ${chalk.white('120-180s')} random delay`));
+  console.log(chalk.gray(`   Delay:      ${chalk.white('1–2s')} jitter between wallets`));
+  console.log(chalk.gray(`   429 Backoff: ${chalk.white('30-60s')} random delay`));
   console.log(chalk.gray(`   Mode:       ${chalk.cyan('Single Job (Run & Exit)')}`));
   console.log(chalk.gray(`   PID:        ${chalk.white(process.pid)}`));
   console.log(DIVIDER);

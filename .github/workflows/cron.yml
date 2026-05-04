@@ -47,4 +47,4 @@ jobs:
 
       - name: Run transaction sync
         run: pnpm start
-        timeout-minutes: 10
+        timeout-minutes: 30
