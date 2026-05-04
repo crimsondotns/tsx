@@ -42,9 +42,9 @@ jobs:
         run: |
           echo '${{ secrets.GOOGLE_CREDENTIALS_JSON }}' > credentials.json
 
-      - name: Create wallets.json
+      - name: Create wallet.json
         run: |
-          echo '${{ secrets.WALLETS_JSON }}' > wallets.json
+          echo '${{ secrets.WALLETS_JSON }}' > wallet.json
 
       - name: Run transaction sync
         run: pnpm start

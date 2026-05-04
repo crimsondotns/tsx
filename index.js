@@ -22,7 +22,7 @@ const FETCH_INTERVAL_MS = (parseInt(process.env.FETCH_INTERVAL_MINUTES, 10) || 1
 const LOCK_FILE = path.join(__dirname, '.bot.lock');
 
 const CREDENTIALS_PATH = path.join(__dirname, 'credentials.json');
-const WALLETS_PATH = path.join(__dirname, 'wallets.json');
+const WALLETS_PATH = path.join(__dirname, 'wallet.json');
 
 // Request headers to mimic Microsoft Edge browser and reduce 403/429 rate-limits
 const API_HEADERS = {
